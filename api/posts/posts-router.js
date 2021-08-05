@@ -1,84 +1,156 @@
-// implement your posts router here
-const express = require('express')
-const post = require('./posts-model')
+// // implement your posts router here
+ const express = require('express')
+ const post = require('./posts-model')
 
-const router = express.Router()
+ const router = express.Router()
+
+ router.get('/', (req, res) => {
+    post.find()
+      .then(found => {
+          res.json(found)
+        })
+       .catch(err => {
+        res.status(500).json({
+            message: 'The post information could not be retrieved',
+            err: err.message,
+            stack: err.stack,
+
+       }) 
+       
+      });
+  });
 
 
 router.get('/', async (req, res) => {
     try {
-      const posts = await post.find(req.query)
-      res.status(200).json(posts)
-    } catch (error) {
-      res.status(500).json({
-        message: `The posts information could not be retrieved`,
-      })
+      const post = await this.post.findById(req.params.id)
+      if(!post) {
+          res.status(404).json({
+              message: 'The post with the specified ID does not exist',
+          })
+      }else {
+          res.json(post)
+      }
+    }catch (err) {
+        res.status(500).json({
+            message: "The post information could not be retrieved",
+            err: err.message,
+            stack: err.stack
+        })
     }
   })
 
-  router.get('/:id', (req, res) => {
-    post.findById(req.params.id)
-      .then(adopter => {
-        if (post) {
-          res.status(200).json(post);
-        } else {
-          res.status(404).json({ message: 'The post with the specified ID does not exist' });
-        }
-      })
-      .catch(error => {
-        console.log(error);
-        res.status(500).json({
-          message: 'The post information could not be retrieved',
-        });
-      });
-  });
+  
 
   router.post('/', (req, res) => {
-    post.add(req.body)
-      .then(post => {
-        res.status(201).json(post);
+    const { tittle, contents } = rq.body
+      if (!tittle || !contents) {
+          res.status(400).json({
+              message: 'please provide title and contents for the post'
+          })
+      }else {
+          post.insert({ title, contents})
+            .then(( { id }) => {
+                return post.findById(id)
+            })
+            .then( post =>{
+                res.status(201).json(post)
+            })
+            .cath(err => {
+                res.status(500).json({
+                    message: "There was an error while saving the post to the database",
+                    err: err.message,
+                    stack: err.stack,
+
+            })
+            })
+       }
+    }) 
+      
+
+    router.delete('/:id', (req, res) => {
+        try {
+            const post = await this.post.findById(req.params.id)
+            if (!post) {
+                res.status(404).json({
+                    message: "The post with specified ID does not exist"
+                })
+            }else {
+                await post.remove(req.params.id)
+                res.json(post)
+            }
+        }catch (err) {
+          res.status(500).json({
+              message: "The post could not be removed",
+              err: err.message,
+              stack: err.stack,
+  
       })
-      .catch(error => {
-        console.log(error);
-        res.status(500).json({
-          message: '{ message: "There was an error while saving the post to the database" }',
-        });
-      });
-  });
+               
+        }
+      
+    });
+
 
   router.put('/:id', (req, res) => {
-    const changes = req.body;
-    post.update(req.params.id, changes)
-      .then(post => {
-        if (post) {
-          res.status(200).json(post);
-        } else {
-          res.status(404).json({ message: "The post with the specified ID does not exist" });
+    const { tittle, contents } = rq.body
+      if (!tittle || !contents) {
+          res.status(400).json({
+              message: 'please provide title and contents for the post'
+          })
+        }else {
+            post.findById(req.params.id)
+            .then(stuff =>{
+                if (!stuff) {
+                    res.status(404).json({
+                        message: 'The post with the specified ID does not exist'
+                    })
+                }else {
+                    return post.update(req.params.id, req.body)
+                }
+            })
+            .then(data => {
+                if (data) {
+                    return post.findById(req.params.id)
+                }
+            })
+            .then(post => {
+                if (post) {
+                    res.json(post)
+                }
+            })
+            .catch(err => {
+                res.status(500).json({
+                    message: "The posts information could not be retrieved",
+                    err: err.message,
+                    stack: err.stack,
+        
+
+                })
+            })
+
         }
-      })
-      .catch(error => {
-        console.log(error);
-        res.status(500).json({
-          message: 'The post information could not be modified',
-        });
-      });
   });
 
-  router.delete('/:id', (req, res) => {
-    post.remove(req.params.id)
-      .then(count => {
-        if (count > 0) {
-          res.status(200).json({ message: 'The adopter has been nuked' });
-        } else {
-          res.status(404).json({ message: 'The post with the specified ID does not exist' });
-        }
-      })
-      .catch(error => {
-        console.log(error);
+  router.get('/api:id:messages', async (req, res) =>{
+      try{
+        const post = await this.post.findById(req.params.id)
+        if (!post) {
+            res.status(404).json({
+                message: "The post with specified ID does not exist"
+            })
+      }else {
+          const messages = await post.findPostComments(req.params.id)
+          res.json(messages)
+      }
+    }catch(err) {
         res.status(500).json({
-          message: 'The post could not be removed',
-        });
-      });
-  });
+            message: "The posts information could not be retrieved",
+            err: err.message,
+            stack: err.stack,
+        })
 
-  module.exports = router
+      }
+  })
+  
+module.exports = router
